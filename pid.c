@@ -1,13 +1,24 @@
-#include <PID_v1.h>
+#include <PID.h>  // updated to maintained PID library
+#include <math.h>
 
 double Setpoint, Input, Output;
+double lastValidInput = 0;  // track last sane input value
 double Kp, Ki, Kd;
 
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
+#define INPUT_MIN 0
+#define INPUT_MAX 1023
+#define EMERGENCY_TIMEOUT 30000  // 30 seconds
+
 void setup() {
   Setpoint = 100;
   Input = analogRead(A0);
+  if (Input < INPUT_MIN || Input > INPUT_MAX) {
+    Input = lastValidInput;
+  } else {
+    lastValidInput = Input;
+  }
   myPID.SetMode(AUTOMATIC);
   myPID.SetSampleTime(100);
   myPID.SetOutputLimits(0, 255);
@@ -17,8 +28,14 @@ void setup() {
 
 void loop() {
   Input = analogRead(A0);
+  if (Input < INPUT_MIN || Input > INPUT_MAX) {
+    Input = lastValidInput;
+  } else {
+    lastValidInput = Input;
+  }
   myPID.Compute();
-  analogWrite(3, Output);
+  int safeOutput = constrain((int)Output, 0, 255);
+  analogWrite(3, safeOutput);
 }
 
 void autoTune() {
@@ -28,9 +45,14 @@ void autoTune() {
   double lastInput = Input;
   int sampleTime = 1000;
   int steps = 30;
+  unsigned long startTime = millis();
 
   //run relay experiment
   for (int i = 0; i < steps; i++) {
+    if (millis() - startTime > EMERGENCY_TIMEOUT) {
+      analogWrite(3, 0);  // put output in safe state
+      return;
+    }
     Setpoint = highSetpoint;
     delay(sampleTime);
     Setpoint = lowSetpoint;
@@ -38,8 +60,12 @@ void autoTune() {
   }
 
   //calculate Ku and Pu
-  Ku = (4 * (highSetpoint - lowSetpoint)) / (3.14 * (Input - lastInput));
-  Pu = sampleTime * steps / (Input - lastInput);
+  double deltaInput = Input - lastInput;
+  if (fabs(deltaInput) < 0.001) {
+    deltaInput = 0.001;  // prevent divide-by-zero
+  }
+  Ku = (4 * (highSetpoint - lowSetpoint)) / (3.14 * deltaInput);
+  Pu = (sampleTime * steps) / deltaInput;
 
   //calculate Kp, Ki, and Kd
   Kp = 0.6 * Ku;

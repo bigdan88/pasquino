@@ -4,8 +4,20 @@ The extension for an Arduino file is .ino. This file type is specific to Arduino
 
 You can create an .ino file by opening the Arduino IDE and selecting "File" > "New" from the menu. Once you've written your code, you can upload it to the board by connecting the board to your computer via a USB cable and selecting the appropriate board and serial port in the Arduino IDE. Then you can click on the upload button to send the code to the board.
 
-Regarding the PID_v1.h library, it can be easily installed via the Arduino IDE library manager. To do this, you can open the Arduino IDE and go to "Sketch" > "Include Library" > "Manage Libraries". Then, in the search bar, type "PID", select the PID_v1 library, and click on the "Install" button. Once the library is installed, you can include it in your code by adding the following line at the top of your code:
+This project now uses the actively maintained **PID** library. It can be installed via the Arduino IDE library manager by searching for `PID` and clicking "Install". Include it in your code with:
 
-Copy code
-#include <PID_v1.h>
-It's worth noting that this library is a version of the PID library that is no longer actively maintained, and there are other libraries such as "PID" and "PID_auto" that offer more features, better performance and are actively maintained.
+```cpp
+#include <PID.h>
+```
+
+The previous README referenced `PID_v1.h`, which is no longer maintained. The switch to `PID.h` ensures compatibility with the latest fixes and improvements.
+
+## Safety features
+
+The code includes several protections for safer operation:
+
+- Sanity checks on sensor input to detect readings outside the expected 0–1023 range.
+- A guard against divide-by-zero during auto-tuning.
+- A 30–second timeout in the tuning routine that forces the output to zero if exceeded.
+- PID output is clamped before sending the value to the hardware pin.
+
