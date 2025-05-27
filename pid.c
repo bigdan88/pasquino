@@ -25,7 +25,8 @@ void autoTune() {
   double highSetpoint = 110;
   double lowSetpoint = 90;
   double Ku, Pu;
-  double lastInput = Input;
+  // read the current input so we can measure the change after the experiment
+  double lastInput = analogRead(A0);
   int sampleTime = 1000;
   int steps = 30;
 
@@ -33,12 +34,14 @@ void autoTune() {
   for (int i = 0; i < steps; i++) {
     Setpoint = highSetpoint;
     delay(sampleTime);
+    Input = analogRead(A0);
     Setpoint = lowSetpoint;
     delay(sampleTime);
+    Input = analogRead(A0);
   }
 
   //calculate Ku and Pu
-  Ku = (4 * (highSetpoint - lowSetpoint)) / (3.14 * (Input - lastInput));
+  Ku = (4 * (highSetpoint - lowSetpoint)) / (3.141592653589793 * (Input - lastInput));
   Pu = sampleTime * steps / (Input - lastInput);
 
   //calculate Kp, Ki, and Kd
